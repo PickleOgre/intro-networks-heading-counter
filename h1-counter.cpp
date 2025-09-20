@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Send the request to the server. Keep sending until the full message has been transmitted.
-	// This is a work in progress -- There is a lot of work still to be done here.
+	// THIS IS A WORK IN PROGRESS -- There is a lot of work still to be done here.
 	ssize_t total_bytes_sent = 0; // Keep track of how much data we have sent in total
 	while (total_bytes_sent < request.size()) // Loop until we have sent the full string
 	{
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 		bytes_sent = send(s, request.c_str(), request.size() - total_bytes_sent, 0); 
 		if (bytes_sent > 0) {
 			total_bytes_sent += bytes_sent;
-		}
+		} 
 	}
 
 	bool socket_open = true;
