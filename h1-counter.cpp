@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 	const int CHUNK_SIZE = stoi(argv[1]); // Size of chunks to be processed.
 	char buf[CHUNK_SIZE];				  // A buffer equal to the specified chunk size
 	unsigned int h1_count = 0;			  // Total <h1> tags found
-	ssize_t total_bytes_received = 0;
+	ssize_t total_bytes_received = 0; // Tracks the total amount of bytes received during runtime
 	string request = "GET /~kkredo/file.html HTTP/1.0\r\n\r\n";
 
 	/* Lookup IP and connect to server */
@@ -52,11 +52,12 @@ int main(int argc, char *argv[])
 	}
 
 	// Send the request to the server. Keep sending until the full message has been transmitted.
-	ssize_t total_bytes_sent = 0;
-	while (total_bytes_sent < request.size())
+	// This is a work in progress -- There is a lot of work still to be done here.
+	ssize_t total_bytes_sent = 0; // Keep track of how much data we have sent in total
+	while (total_bytes_sent < request.size()) // Loop until we have sent the full string
 	{
-		ssize_t bytes_sent = 0;
-		bytes_sent = send(s, request.c_str(), request.size() - total_bytes_sent, 0);
+		ssize_t bytes_sent = 0; // Keep track of how many bytes are sent in each loop
+		bytes_sent = send(s, request.c_str(), request.size() - total_bytes_sent, 0); 
 		if (bytes_sent > 0) {
 			total_bytes_sent += bytes_sent;
 		}
@@ -67,7 +68,7 @@ int main(int argc, char *argv[])
 	{
 		ssize_t msg_size = 0;		// The amount of bytes recieved in a single recv() call
 		ssize_t bytes_received = 0; // The amount of bytes that have been recieved since the start of the chunk
-		string response = "";		// Stores the values of the incoming chunk as a string
+		string reply = "";		// Stores the values of the incoming chunk as a string
 		while (bytes_received < CHUNK_SIZE)
 		{
 			// Receive at most one chunk of data from the server.
@@ -95,11 +96,11 @@ int main(int argc, char *argv[])
 			}
 		}
 		// Store incoming data in the string
-		response.append(buf, bytes_received);
+		reply.append(buf, bytes_received);
 
-		// Search for '<h1>' tags in response, count them and add them to the total.
+		// Search for '<h1>' tags in reply, count them and add them to the total.
 		size_t pos = 0;
-		while ((pos = response.find("<h1>", pos)) != string::npos)
+		while ((pos = reply.find("<h1>", pos)) != string::npos)
 		{
 			h1_count++;
 			pos += 4;
