@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
 	unsigned int h1_count = 0;			  // Total <h1> tags found
 	ssize_t total_bytes_received = 0; // Tracks the total amount of bytes received during runtime
 	string request = "GET /~kkredo/file.html HTTP/1.0\r\n\r\n";
+	const char *request_ptr = request.c_str();
 
 	/* Lookup IP and connect to server */
 	if ((s = lookup_and_connect(host, port)) < 0)
@@ -53,14 +54,14 @@ int main(int argc, char *argv[])
 
 	// Send the request to the server. Keep sending until the full message has been transmitted.
 	// THIS IS A WORK IN PROGRESS -- There is a lot of work still to be done here.
-	ssize_t total_bytes_sent = 0; // Keep track of how much data we have sent in total
-	while (total_bytes_sent < request.size()) // Loop until we have sent the full string
+	ssize_t total_bytes_sent = 0; // Keep track of how much data we have sent in total. We use ssize_t because that is the type used by send() and recv()
+	while (total_bytes_sent < static_cast<ssize_t>(request.size())) // Loop until we have sent the full string
 	{
-		ssize_t bytes_sent = 0; // Keep track of how many bytes are sent in each loop
-		bytes_sent = send(s, request.c_str(), request.size() - total_bytes_sent, 0); 
+		ssize_t bytes_sent = 0; // The amount of bytes sent in each loop
+		bytes_sent = send(s, &request_ptr + total_bytes_sent, request.size() - total_bytes_sent, 0); 
 		if (bytes_sent > 0) {
 			total_bytes_sent += bytes_sent;
-		} 
+		} // Add handling for errors and disconnections. Test code on ecc-linux w/ test script
 	}
 
 	bool socket_open = true;
