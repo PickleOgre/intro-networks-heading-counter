@@ -1,5 +1,5 @@
-/* Group Members: Joe Lawrence
- * Class: EECE 446, Inroduction to Computer Networking
+/* Group Members: Joe Lawrence, Nate Smith
+ * Class: EECE 446, Introduction to Computer Networking
  * Semester: Fall 2025 */
 
 /* This code is an updated version of the sample code from "Computer Networks: A Systems
@@ -29,7 +29,7 @@ int lookup_and_connect(const char *host, const char *service);
 int main(int argc, char *argv[])
 {
 	// Check for errors in command line args.
-	if (argc < 2 || stoi(argv[1]) <= 4 || stoi(argv[1]) > 1000)
+	if (argc < 2 || stoi(argv[1]) <= 0 || stoi(argv[1]) > 1000) // fixed range check
 	{
 		cerr << "Usage: " << argv[0] << " <chunk size>" << endl;
 		exit(1);
@@ -40,31 +40,44 @@ int main(int argc, char *argv[])
 	const char *host = "www.ecst.csuchico.edu";
 	const char *port = "80";
 	const int CHUNK_SIZE = stoi(argv[1]); // Size of chunks to be processed.
-	char buf[CHUNK_SIZE];				  // A buffer equal to the specified chunk size
+	char *buf = new char[CHUNK_SIZE];     // A C-style string buffer
 	unsigned int h1_count = 0;			  // Total <h1> tags found
-	ssize_t total_bytes_received = 0; // Tracks the total amount of bytes received during runtime
+	ssize_t total_bytes_received = 0;     // Tracks the total amount of bytes received during runtime
 	string request = "GET /~kkredo/file.html HTTP/1.0\r\n\r\n";
-	const char *request_ptr = request.c_str();
+	const char *request_ptr = request.c_str(); // Allows referencing the request as a c string.
 
 	/* Lookup IP and connect to server */
 	if ((s = lookup_and_connect(host, port)) < 0)
 	{
+		delete[] buf; // cleanup
 		exit(1);
 	}
 
 	// Send the request to the server. Keep sending until the full message has been transmitted.
-	// THIS IS A WORK IN PROGRESS -- There is a lot of work still to be done here.
 	ssize_t total_bytes_sent = 0; // Keep track of how much data we have sent in total. We use ssize_t because that is the type used by send() and recv()
 	while (total_bytes_sent < static_cast<ssize_t>(request.size())) // Loop until we have sent the full string
 	{
 		ssize_t bytes_sent = 0; // The amount of bytes sent in each loop
-		bytes_sent = send(s, &request_ptr + total_bytes_sent, request.size() - total_bytes_sent, 0); 
+		bytes_sent = send(s, request_ptr + total_bytes_sent, request.size() - total_bytes_sent, 0); // fixed pointer bug
 		if (bytes_sent > 0) {
 			total_bytes_sent += bytes_sent;
-		} // Add handling for errors and disconnections. Test code on ecc-linux w/ test script
+		} 
+		// added error handling that was missing
+		else if (bytes_sent < 0) {
+			perror("send");
+			close(s);
+			delete[] buf;
+			exit(1);
+		}
+		else {
+			cerr << "Connection closed during send" << endl;
+			close(s);
+			delete[] buf;
+			exit(1);
+		}
 	}
 
-	bool socket_open = true;
+	bool socket_open = true; 
 	while (socket_open == true)
 	{
 		ssize_t msg_size = 0;		// The amount of bytes recieved in a single recv() call
@@ -93,18 +106,24 @@ int main(int argc, char *argv[])
 			{
 				// Error occurred
 				perror("recv");
+				close(s);
+				delete[] buf;
 				exit(1);
 			}
 		}
-		// Store incoming data in the string
-		reply.append(buf, bytes_received);
+		
+		// only process if we actually got data
+		if (bytes_received > 0) {
+			// Store incoming data in the string
+			reply.append(buf, bytes_received);
 
-		// Search for '<h1>' tags in reply, count them and add them to the total.
-		size_t pos = 0;
-		while ((pos = reply.find("<h1>", pos)) != string::npos)
-		{
-			h1_count++;
-			pos += 4;
+			// Search for '<h1>' tags in reply, count them and add them to the total.
+			size_t pos = 0;
+			while ((pos = reply.find("<h1>", pos)) != string::npos)
+			{
+				h1_count++;
+				pos += 4;
+			}
 		}
 	}
 	// Print the total number of h1 tags found and number of bytes received.
@@ -113,6 +132,7 @@ int main(int argc, char *argv[])
 
 	// Close the socket.
 	close(s);
+	delete[] buf; // cleanup memory
 
 	return 0;
 }
@@ -124,7 +144,8 @@ int lookup_and_connect(const char *host, const char *service)
 	int s;
 
 	/* Translate host name into peer's IP address */
-	memset(&hints, 0, sizeof(hints));
+	// avoid using memset per assignment requirements  
+	hints = {0};
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = 0;
